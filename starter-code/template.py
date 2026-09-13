@@ -7,14 +7,18 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 from tools import TOOL_DEFINITIONS, TOOL_MAP
 
 
 load_dotenv(Path(__file__).with_name(".env"))
+# OS variables take precedence, then starter-code/.env, then project-root .env.
+for _name, _value in dotenv_values(Path(__file__).resolve().parent.parent / ".env").items():
+    if _name in {"NVIDIA_API_KEY", "NVIDIA_MODEL", "NVIDIA_BASE_URL", "LAB_MODE"} and _value and not os.getenv(_name):
+        os.environ[_name] = _value
 NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
-NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b")
 
 
 def _use_llm() -> bool:
@@ -22,7 +26,9 @@ def _use_llm() -> bool:
 
 
 SYSTEM_PROMPT = """Bạn là trợ lý hỗ trợ khách hàng. Chỉ dùng Observation để khẳng định
-giá chuyến bay hoặc thời tiết; không tự bịa dữ liệu. Công cụ được phép:
+giá chuyến bay hoặc thời tiết; không tự bịa dữ liệu. Đây là dữ liệu mẫu của bài lab,
+không phải thông tin thời gian thực và không thể đặt vé thật. Khi trả lời, nói rõ
+đây là dữ liệu mẫu; không dùng các từ như "hiện nay" cho thời tiết. Công cụ được phép:
 {tools}
 
 Ở MỖI lượt, chỉ xuất một JSON object hợp lệ, không markdown:
@@ -147,30 +153,34 @@ class ReActAgent:
                 if not isinstance(decision, dict):
                     raise ValueError("Action phải là JSON object")
                 step["thought"] = str(decision.get("thought", ""))
-                if step["thought"]:
-                    self._emit("thought", iteration, step["thought"])
                 if "final_answer" in decision:
                     answer = str(decision["final_answer"]).strip()
                     if not answer:
                         raise ValueError("Final Answer rỗng")
                     # The lab counts a single tool call plus its answer as one step.
                     if len(self.trace) == 1 and "action" in self.trace[0]:
+                        if step["thought"]:
+                            self._emit("thought", 1, step["thought"])
                         self.trace[0]["final_answer"] = answer
                         return _result("completed", answer, self.trace)
+                    if step["thought"]:
+                        self._emit("thought", iteration, step["thought"])
                     step["final_answer"] = answer
                     self.trace.append(step)
                     return _result("completed", answer, self.trace)
 
+                if step["thought"]:
+                    self._emit("thought", iteration, step["thought"])
                 action = decision["action"]
                 if not isinstance(action, dict) or not isinstance(action.get("args"), dict):
                     raise ValueError("Action cần name và args dạng object")
                 name = str(action["name"]).strip().lower()
                 args = action["args"]
                 step["action"] = {"name": name, "args": args}
+                self._emit("action", iteration, step["action"])
                 tool = TOOL_MAP.get(name)
                 if tool is None:
                     raise ValueError(f"Tool không hợp lệ: {name}")
-                self._emit("action", iteration, step["action"])
                 try:
                     observation = tool(**args)
                 except (TypeError, ValueError) as exc:

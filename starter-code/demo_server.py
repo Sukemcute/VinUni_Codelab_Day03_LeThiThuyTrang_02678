@@ -103,8 +103,8 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     server = ThreadingHTTPServer((args.host, args.port), DemoHandler)
-    print(f"Demo đang chạy tại http://{args.host}:{args.port}")
-    print("Nhấn Ctrl+C để dừng.")
+    print(f"Demo server: http://{args.host}:{args.port}")
+    print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

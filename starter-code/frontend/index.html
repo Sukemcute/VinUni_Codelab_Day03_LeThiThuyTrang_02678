@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fc">
+  <title>AeroDesk · ReAct Agent Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M4 17.5 27.5 6l-7.1 20-5.3-7-7.7 2.9 2.3-6.3L4 17.5Z" fill="currentColor" />
+            <path d="m15.1 19 12.4-13" stroke="#fff" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">AeroDesk <span>LAB 03</span></div>
+          <div class="brand-subtitle">Flight assistant · ReAct Agent demo</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="engine-badge" id="engineBadge"><span class="status-dot"></span>Đang kiểm tra...</span>
+        <button class="reset-button" id="resetButton" type="button" aria-label="Làm mới cuộc hội thoại">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          <span>Làm mới</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel chat-panel" aria-labelledby="chatTitle">
+        <div class="panel-heading chat-heading">
+          <div>
+            <p class="eyebrow">TRẢI NGHIỆM KHÁCH HÀNG</p>
+            <h1 id="chatTitle">Trợ lý tìm chuyến bay <span class="title-spark">✦</span></h1>
+            <p class="panel-subtitle">Hỏi về chuyến bay, ngân sách và thời tiết điểm đến.</p>
+          </div>
+          <div class="mode-switch" role="group" aria-label="Chế độ trả lời">
+            <button class="mode-button active" type="button" data-mode="agent" aria-pressed="true">ReAct Agent</button>
+            <button class="mode-button" type="button" data-mode="baseline" aria-pressed="false">Baseline</button>
+          </div>
+        </div>
+
+        <div class="chat-feed" id="chatFeed" aria-live="polite">
+          <div class="message assistant-message">
+            <div class="avatar assistant-avatar" aria-hidden="true">A</div>
+            <div class="message-content">
+              <div class="message-meta"><strong>AeroDesk</strong><span>Trợ lý của bạn</span></div>
+              <div class="message-bubble">Xin chào! Mình có thể giúp bạn tìm chuyến bay phù hợp và xem thời tiết tại
+                điểm đến. Hãy thử một câu hỏi bên dưới để xem agent làm việc từng bước nhé.</div>
+              <div class="suggestion-list" id="suggestionList">
+                <button type="button"
+                  data-prompt="Tìm cho tôi chuyến bay từ HAN đi SGN dưới 2 triệu, rồi cho biết thời tiết SGN nên mặc gì?">✈️
+                  Tìm vé + xem thời tiết</button>
+                <button type="button" data-prompt="Có chuyến bay nào từ HAN đi DAD giá dưới 1.5 triệu không?">🎫 Tìm vé
+                  HAN → DAD</button>
+                <button type="button" data-prompt="Tìm cho tôi chuyến bay từ SGN đi HAN dưới 500k.">🔎 Thử trường hợp
+                  hết vé</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer-wrap">
+          <div class="composer-hint"><span class="hint-dot"></span> Dữ liệu chuyến bay và thời tiết là dữ liệu mẫu của
+            bài lab.</div>
+          <form class="composer" id="chatForm">
+            <label class="sr-only" for="messageInput">Câu hỏi của bạn</label>
+            <textarea id="messageInput" name="message" rows="1" maxlength="2000"
+              placeholder="Ví dụ: Tìm chuyến bay HAN đi SGN dưới 2 triệu..." required></textarea>
+            <button class="send-button" id="sendButton" type="submit" aria-label="Gửi câu hỏi">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m4 12 15-7-3.5 14-3.2-5.2L4 12Zm8.3 1.8L19 5" stroke="currentColor" stroke-width="1.7"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </form>
+          <div class="composer-footer"><span>Enter để gửi · Shift + Enter để xuống dòng</span><span id="charCount">0 /
+              2000</span></div>
+        </div>
+      </section>
+
+      <aside class="panel trace-panel" aria-labelledby="traceTitle">
+        <div class="panel-heading trace-heading">
+          <div class="trace-heading-main">
+            <div class="trace-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 6h5v5H4zM15 13h5v5h-5zM9 8h4a4 4 0 0 1 4 4v1M6.5 11v7h8.5" stroke="currentColor"
+                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <p class="eyebrow">PHÍA SAU CÂU TRẢ LỜI</p>
+              <h2 id="traceTitle">Agent activity</h2>
+            </div>
+          </div>
+          <span class="run-state" id="runState"><span></span> Sẵn sàng</span>
+        </div>
+
+        <div class="trace-summary">
+          <div class="summary-item"><span>BƯỚC</span><strong id="metricSteps">0</strong></div>
+          <div class="summary-item"><span>TOOL CALLS</span><strong id="metricTools">0</strong></div>
+          <div class="summary-item"><span>TRẠNG THÁI</span><strong id="metricStatus">Chờ yêu cầu</strong></div>
+        </div>
+
+        <div class="trace-section-label">
+          <span>LIVE EXECUTION LOG</span>
+          <span class="live-indicator"><i></i> Theo thời gian thực</span>
+        </div>
+        <div class="trace-feed" id="traceFeed" aria-live="polite">
+          <div class="trace-empty" id="traceEmpty">
+            <div class="empty-graphic" aria-hidden="true">
+              <span>Thought</span><b>→</b><span>Action</span><b>→</b><span>Observation</span>
+            </div>
+            <h3>Chưa có hoạt động</h3>
+            <p>Gửi một câu hỏi để xem agent suy luận, gọi công cụ và tổng hợp câu trả lời.</p>
+          </div>
+        </div>
+
+        <div class="tool-footer">
+          <div class="tool-footer-title"><span class="tool-footer-dot"></span> TOOLS ĐƯỢC ĐĂNG KÝ</div>
+          <div class="tool-pills"><span>get_flight_info</span><span>get_weather_forecast</span></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+</body>
+
+</html>
